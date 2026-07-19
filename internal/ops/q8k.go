@@ -35,6 +35,20 @@ func NewQ8K(n int) Q8K {
 // Blocks returns the number of super-blocks in q.
 func (q Q8K) Blocks() int { return len(q.Scales) }
 
+// View returns a Q8K covering the first n values of q, sharing its storage.
+// n must be a positive multiple of Q8KBlockSize.
+func (q Q8K) View(n int) Q8K {
+	if n <= 0 || n%Q8KBlockSize != 0 || n > len(q.Qs) {
+		panic("ops: Q8K View size out of range")
+	}
+	blocks := n / Q8KBlockSize
+	return Q8K{
+		Scales: q.Scales[:blocks],
+		Qs:     q.Qs[:n],
+		Bsums:  q.Bsums[:blocks*Q8KGroupCount],
+	}
+}
+
 // QuantizeQ8K quantizes src into dst using the Q8_K scheme, mirroring ggml's
 // quantize_row_q8_K_ref: per 256-value block, d = amax/127, qs = round(x/d),
 // plus per-16-value int16 block sums. src length must match dst capacity.
