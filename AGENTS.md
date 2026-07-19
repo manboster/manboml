@@ -692,7 +692,7 @@ token IDs must be exact; logits and intermediates use documented tolerances.
 | M0 | Product contract, parser decision, runtime architecture, memory model, API, and roadmap | Documented; implementation not authorized |
 | M1 | Go module, root API types, Ollama loader adapter, backing, fixtures, and cross-build baseline | Partially complete: module, backing, and loader done with real-model header verification; root API types pending |
 | M2 | F16, Q4_K, Q6_K, Q8_K, matrix-vector, Transformer operators, and golden tests | Complete with internal-reference golden tests; ggml-generated fixture cross-checks remain future work |
-| M3 | Qwen2 tokenizer, raw generation formatting, recognized Qwen3Guard chat formatter | Not started |
+| M3 | Qwen2 tokenizer, raw generation formatting, recognized Qwen3Guard chat formatter | Complete: Ollama BPE adapter with Qwen2 pre-tokenization and pinned template formatter; exact llama.cpp token-ID golden corpus remains future work |
 | M4 | Qwen3 binder, F16 KV sessions, tiny-model logits, greedy generation, cancellation | Not started |
 | M5 | Real Qwen3Guard Q4_K_M parity, memory estimates, public Generate/Chat examples | Not started |
 | M6 | Worker pool, profiling-driven portable optimization, full target runtime matrix | Not started |
@@ -846,3 +846,11 @@ above are discovery references, not reproducible implementation inputs.
   SwiGLU, GQA-ready F16 attention, and deterministic argmax. A bounded
   row-partitioned executor produces bit-identical output for worker counts
   1..64. All 13 Linux GOARCH targets cross-build with `CGO_ENABLED=0`.
+- 2026-07-19: `internal/tokenizer` was completed by adapting Ollama's pure-Go
+  `tokenizer.BytePairEncoding` with the Qwen2 pre-tokenization pattern instead
+  of writing a custom BPE engine. The loader extracts token types, scores and
+  special-token flags; a compiled Qwen3Guard-Gen formatter renders user and
+  assistant moderation prompts, and embedded templates are recognized by a
+  whitespace-insensitive comparison against the pinned template. Verified
+  against the real model vocabulary: special tokens 151644/151645 encode
+  correctly and the embedded template is recognized.
