@@ -42,11 +42,21 @@ func buildGGUF(version uint32, kvs []testKV, tensors []testTensor, dataSize int)
 		case 8:
 			ggufString(&b, kv.value.(string))
 		case 9:
-			binary.Write(&b, binary.LittleEndian, uint32(8))
-			items := kv.value.([]string)
-			binary.Write(&b, binary.LittleEndian, uint64(len(items)))
-			for _, item := range items {
-				ggufString(&b, item)
+			switch items := kv.value.(type) {
+			case []string:
+				binary.Write(&b, binary.LittleEndian, uint32(8))
+				binary.Write(&b, binary.LittleEndian, uint64(len(items)))
+				for _, item := range items {
+					ggufString(&b, item)
+				}
+			case []int32:
+				binary.Write(&b, binary.LittleEndian, uint32(5))
+				binary.Write(&b, binary.LittleEndian, uint64(len(items)))
+				for _, item := range items {
+					binary.Write(&b, binary.LittleEndian, item)
+				}
+			default:
+				panic("unsupported test array type")
 			}
 		default:
 			panic("unsupported test value type")
@@ -76,6 +86,7 @@ func baseKVs() []testKV {
 		{key: "tokenizer.ggml.model", typ: 8, value: "gpt2"},
 		{key: "tokenizer.ggml.pre", typ: 8, value: "qwen2"},
 		{key: "tokenizer.ggml.tokens", typ: 9, value: []string{"a", "b", "<|im_end|>"}},
+		{key: "tokenizer.ggml.token_type", typ: 9, value: []int32{1, 1, 3}},
 		{key: "tokenizer.ggml.merges", typ: 9, value: []string{"a b"}},
 		{key: "tokenizer.ggml.bos_token_id", typ: 4, value: uint32(1)},
 		{key: "tokenizer.ggml.eos_token_id", typ: 4, value: uint32(2)},
@@ -131,6 +142,9 @@ func TestParseValid(t *testing.T) {
 		}
 		if len(tk.Tokens) != 3 || tk.Tokens[2] != "<|im_end|>" {
 			t.Fatalf("v%d tokens = %v", version, tk.Tokens)
+		}
+		if len(tk.TokenTypes) != 3 || tk.TokenTypes[2] != 3 {
+			t.Fatalf("v%d token types = %v", version, tk.TokenTypes)
 		}
 		if len(tk.Merges) != 1 || tk.Merges[0] != "a b" {
 			t.Fatalf("v%d merges = %v", version, tk.Merges)

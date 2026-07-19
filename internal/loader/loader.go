@@ -46,8 +46,12 @@ type Tokenizer struct {
 	Model          string
 	Pre            string
 	Tokens         []string
+	TokenTypes     []int32
+	Scores         []float32
 	Merges         []string
 	Template       string
+	AddBOS         bool
+	AddEOS         bool
 	BOSTokenID     int64
 	EOSTokenID     int64
 	EOTTokenID     int64
@@ -227,8 +231,12 @@ func extractTokenizer(kv ggml.KV) Tokenizer {
 		Model:          kv.String("tokenizer.ggml.model"),
 		Pre:            kv.String("tokenizer.ggml.pre"),
 		Tokens:         kv.Strings("tokenizer.ggml.tokens"),
+		TokenTypes:     kv.Ints("tokenizer.ggml.token_type"),
+		Scores:         kv.Floats("tokenizer.ggml.scores"),
 		Merges:         kv.Strings("tokenizer.ggml.merges"),
 		Template:       kv.ChatTemplate(),
+		AddBOS:         kv.Bool("tokenizer.ggml.add_bos_token"),
+		AddEOS:         kv.Bool("tokenizer.ggml.add_eos_token"),
 		BOSTokenID:     tokenID(kv, "tokenizer.ggml.bos_token_id"),
 		EOSTokenID:     tokenID(kv, "tokenizer.ggml.eos_token_id"),
 		EOTTokenID:     tokenID(kv, "tokenizer.ggml.eot_token_id"),
