@@ -117,7 +117,7 @@ errors.go               stable public error categories
 internal/backing/       long-lived mmap or bounded read fallback
 internal/loader/        Ollama GGUF adapter and normalized tensor descriptors
 internal/ops/           all portable numerical operators
-internal/qwen3/         Qwen3 weights, forward path, private sessions and KV
+internal/arch/qwen3/    Qwen3 weights, forward path, private sessions and KV
 internal/tokenizer/     Qwen2 BPE, special tokens, decoding and formatters
 ```
 
@@ -132,23 +132,29 @@ Dependency direction:
 ```text
 manboml
   -> internal/loader
-  -> internal/qwen3
+  -> internal/arch/qwen3
   -> internal/tokenizer
 
 internal/loader
   -> internal/backing
   -> github.com/ollama/ollama/fs/ggml
 
-internal/qwen3
+internal/arch/qwen3
   -> internal/loader
   -> internal/ops
+  -> internal/tokenizer
+
+internal/tokenizer
+  -> internal/loader
+  -> github.com/ollama/ollama/tokenizer
 
 internal/ops
   -> standard library only unless profiling justifies a portable dependency
 ```
 
 Ollama types must not appear in the public API or in numerical operator
-signatures. `internal/loader` is the only package that imports Ollama.
+signatures. `internal/loader` is the only package that imports Ollama's GGUF
+parser, and `internal/tokenizer` the only one that imports Ollama's BPE.
 
 ## GGUF Parser Decision
 
@@ -693,7 +699,7 @@ token IDs must be exact; logits and intermediates use documented tolerances.
 | M1 | Go module, root API types, Ollama loader adapter, backing, fixtures, and cross-build baseline | Partially complete: module, backing, and loader done with real-model header verification; root API types pending |
 | M2 | F16, Q4_K, Q6_K, Q8_K, matrix-vector, Transformer operators, and golden tests | Complete with internal-reference golden tests; ggml-generated fixture cross-checks remain future work |
 | M3 | Qwen2 tokenizer, raw generation formatting, recognized Qwen3Guard chat formatter | Complete: Ollama BPE adapter with Qwen2 pre-tokenization and pinned template formatter; exact llama.cpp token-ID golden corpus remains future work |
-| M4 | Qwen3 binder, F16 KV sessions, tiny-model logits, greedy generation, cancellation | Not started |
+| M4 | Qwen3 binder, F16 KV sessions, tiny-model logits, greedy generation, cancellation | Complete: `internal/arch/qwen3` with metadata-driven config, validated weight binding, eager head-major F16 KV, Q8_K forward path, deterministic greedy generation, and a project-owned tiny Qwen3 GGUF test model; llama.cpp numerical parity checks remain future work |
 | M5 | Real Qwen3Guard Q4_K_M parity, memory estimates, public Generate/Chat examples | Not started |
 | M6 | Worker pool, profiling-driven portable optimization, full target runtime matrix | Not started |
 | M7 | v0.1 documentation, compatibility contract, benchmarks, fuzz/race/release checks | Not started |
@@ -854,3 +860,13 @@ above are discovery references, not reproducible implementation inputs.
   whitespace-insensitive comparison against the pinned template. Verified
   against the real model vocabulary: special tokens 151644/151645 encode
   correctly and the embedded template is recognized.
+- 2026-07-19: The Qwen3 runtime was implemented as `internal/arch/qwen3`
+  (namespace chosen by the user to allow future architecture siblings).
+  Configuration is derived entirely from GGUF metadata; weight binding
+  validates names, shapes, kinds and backing ranges; sessions own eager
+  head-major F16 KV with logical reset and token commit semantics; the
+  forward path uses the Q8_K production matvec with the F32 reference path
+  retained in ops; greedy generation stops at EOG or the caller bound.
+  Verified end to end with a deterministic project-owned tiny Qwen3 GGUF:
+  determinism, worker-count bit parity, reset independence, context limits,
+  cancellation and EOG/max-token termination.
