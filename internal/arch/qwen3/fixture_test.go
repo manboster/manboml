@@ -87,7 +87,7 @@ func buildTinyGGUF(f fixture) []byte {
 	tokens := make([]string, f.vocab)
 	types := make([]int32, f.vocab)
 	for i := range tokens {
-		tokens[i] = fmt.Sprintf("t%d", i)
+		tokens[i] = string(rune('a' + i))
 		types[i] = 1
 	}
 	tokens[f.vocab-1] = "<|im_end|>"
