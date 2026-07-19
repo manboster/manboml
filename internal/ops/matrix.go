@@ -51,7 +51,7 @@ func (m Matrix) Validate() error {
 	if rowBytes == 0 {
 		return fmt.Errorf("ops: unsupported matrix kind %d with %d columns", m.Kind, m.Cols)
 	}
-	if m.Rows > (1<<63-1)/rowBytes {
+	if m.Rows > int(^uint(0)>>1)/rowBytes {
 		return fmt.Errorf("ops: matrix size overflows")
 	}
 	if len(m.Data) != m.Rows*rowBytes {
