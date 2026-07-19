@@ -6,10 +6,10 @@ milestone starts or completes, or verification results change.
 
 ## Current Status
 
-- Phase: architecture documented; implementation not started
-- Updated: 2026-07-17
-- Implementation authorization: not granted; the user requested documentation
-  changes only after the architecture discussion
+- Phase: implementation in progress
+- Updated: 2026-07-19
+- Implementation authorization: granted incrementally by the user; parsing and
+  operator modules are complete
 - Repository contents at planning start: `README.md` only
 - Latest repository commit at planning start: `468490f feat: init repo`
 - Planning environment: Go 1.26.3, Darwin, arm64
@@ -690,8 +690,8 @@ token IDs must be exact; logits and intermediates use documented tolerances.
 | Milestone | Deliverable | Status |
 | --- | --- | --- |
 | M0 | Product contract, parser decision, runtime architecture, memory model, API, and roadmap | Documented; implementation not authorized |
-| M1 | Go module, root API types, Ollama loader adapter, backing, fixtures, and cross-build baseline | Not started |
-| M2 | F16, Q4_K, Q6_K, Q8_K, matrix-vector, Transformer operators, and golden tests | Not started |
+| M1 | Go module, root API types, Ollama loader adapter, backing, fixtures, and cross-build baseline | Partially complete: module, backing, and loader done with real-model header verification; root API types pending |
+| M2 | F16, Q4_K, Q6_K, Q8_K, matrix-vector, Transformer operators, and golden tests | Complete with internal-reference golden tests; ggml-generated fixture cross-checks remain future work |
 | M3 | Qwen2 tokenizer, raw generation formatting, recognized Qwen3Guard chat formatter | Not started |
 | M4 | Qwen3 binder, F16 KV sessions, tiny-model logits, greedy generation, cancellation | Not started |
 | M5 | Real Qwen3Guard Q4_K_M parity, memory estimates, public Generate/Chat examples | Not started |
@@ -834,3 +834,15 @@ above are discovery references, not reproducible implementation inputs.
   and stable-tag Ollama pinning were accepted.
 - 2026-07-17: The user requested that only this planning document be updated.
   Implementation remains intentionally unstarted.
+- 2026-07-19: Implementation began. `internal/backing` (read-only mmap plus
+  read fallback) and `internal/loader` (Ollama `fs/ggml` v0.32.1 adapter with
+  independent structural validation) were completed and verified against the
+  real Qwen3Guard Q4_K_M header: 311 tensors, 169 Q4_K, 29 Q6_K, 113 F32,
+  151,936 vocabulary entries.
+- 2026-07-19: `internal/ops` was completed: exact F16 conversion, Q4_K/Q6_K
+  dequantization, Q4_K/Q6_K × Q8_K integer dot products matching ggml's
+  accumulation order, Q8_K activation quantization, F32 and Q8_K matvec,
+  embedding, RMSNorm, per-head RMSNorm, NeoX RoPE table, stable softmax,
+  SwiGLU, GQA-ready F16 attention, and deterministic argmax. A bounded
+  row-partitioned executor produces bit-identical output for worker counts
+  1..64. All 13 Linux GOARCH targets cross-build with `CGO_ENABLED=0`.
