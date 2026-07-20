@@ -31,17 +31,28 @@ type Result struct {
 }
 
 // Generate tokenizes prompt, prefills it and greedily generates at most
-// maxTokens new tokens. Generation stops early at an end-of-generation
-// token. The session is reset before use.
+// maxTokens new tokens using a fresh session.
 func (m *Model) Generate(ctx context.Context, tok *tokenizer.Tokenizer, prompt string, maxTokens int) (Result, error) {
+	ids, err := tok.Encode(prompt)
+	if err != nil {
+		return Result{}, err
+	}
+	s, err := m.NewSession()
+	if err != nil {
+		return Result{}, err
+	}
+	return m.GenerateTokens(ctx, tok, s, ids, maxTokens)
+}
+
+// GenerateTokens prefills pre-tokenized ids and greedily generates at most
+// maxTokens new tokens with the supplied session. The session is reset before
+// use, so pooled sessions may be reused across independent requests.
+// Generation stops early at an end-of-generation token.
+func (m *Model) GenerateTokens(ctx context.Context, tok *tokenizer.Tokenizer, s *Session, ids []int32, maxTokens int) (Result, error) {
 	if maxTokens <= 0 {
 		return Result{}, fmt.Errorf("%w: maxTokens must be positive", ErrInvalidRequest)
 	}
 	if err := ctx.Err(); err != nil {
-		return Result{}, err
-	}
-	ids, err := tok.Encode(prompt)
-	if err != nil {
 		return Result{}, err
 	}
 	if len(ids) == 0 {
@@ -52,10 +63,6 @@ func (m *Model) Generate(ctx context.Context, tok *tokenizer.Tokenizer, prompt s
 			ErrContextLimit, len(ids), maxTokens, m.contextSize)
 	}
 
-	s, err := m.NewSession()
-	if err != nil {
-		return Result{}, err
-	}
 	s.Reset()
 	for i, id := range ids {
 		if err := ctx.Err(); err != nil {
