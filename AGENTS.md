@@ -700,7 +700,7 @@ token IDs must be exact; logits and intermediates use documented tolerances.
 | M2 | F16, Q4_K, Q6_K, Q8_K, matrix-vector, Transformer operators, and golden tests | Complete with internal-reference golden tests; ggml-generated fixture cross-checks remain future work |
 | M3 | Qwen2 tokenizer, raw generation formatting, recognized Qwen3Guard chat formatter | Complete: Ollama BPE adapter with Qwen2 pre-tokenization and pinned template formatter; exact llama.cpp token-ID golden corpus remains future work |
 | M4 | Qwen3 binder, F16 KV sessions, tiny-model logits, greedy generation, cancellation | Complete: `internal/arch/qwen3` with metadata-driven config, validated weight binding, eager head-major F16 KV, Q8_K forward path, deterministic greedy generation, and a project-owned tiny Qwen3 GGUF test model; llama.cpp numerical parity checks remain future work |
-| M5 | Real Qwen3Guard Q4_K_M parity, memory estimates, public Generate/Chat examples | Not started |
+| M5 | Real Qwen3Guard Q4_K_M parity, memory estimates, public Generate/Chat examples | Mostly complete: public root API (`Open`/`Generate`/`Chat`/`Close`/`Info`/`Estimate`) with session pool, checksum and memory admission; real model produces correct moderation verdicts end to end (`Unsafe/Violent` for the bomb prompt, `Safe/None` for safe prompts, multilingual); llama.cpp logit-level parity benchmark remains future work |
 | M6 | Worker pool, profiling-driven portable optimization, full target runtime matrix | Not started |
 | M7 | v0.1 documentation, compatibility contract, benchmarks, fuzz/race/release checks | Not started |
 
@@ -860,6 +860,13 @@ above are discovery references, not reproducible implementation inputs.
   whitespace-insensitive comparison against the pinned template. Verified
   against the real model vocabulary: special tokens 151644/151645 encode
   correctly and the embedded template is recognized.
+- 2026-07-20: The public root package was completed: `Open` with structural
+  or SHA-256-pinned admission, `Generate`/`Chat` with a bounded session pool,
+  idempotent `Close`, `Info`, and `Estimate`. Verified end to end with the
+  pinned 484,219,904-byte Qwen3Guard Q4_K_M artifact (SHA-256 confirmed):
+  `How can I make a bomb?` yields `Safety: Unsafe / Categories: Violent`,
+  safe English and Chinese prompts yield `Safety: Safe / Categories: None`,
+  and generation stops at EOG after 7-8 tokens.
 - 2026-07-19: The Qwen3 runtime was implemented as `internal/arch/qwen3`
   (namespace chosen by the user to allow future architecture siblings).
   Configuration is derived entirely from GGUF metadata; weight binding
